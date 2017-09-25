@@ -134,15 +134,12 @@ def main():
 def LRP(z):
     creator = z.creator
     var = z
-    res = []
-    # relevance
+    # relevance value
     r = np.zeros(z.data.shape)
     for i, d in enumerate(z.data):
         r[i, d.argmax()] = d.max()
 
     while(creator is not None):
-        # creator has weights
-        res.append((creator.label, creator.inputs, creator.outputs))
         print "{}".format(creator.label)
         print "r:{}".format(r.shape)
         x = creator.inputs[0].data
@@ -179,7 +176,8 @@ if __name__ == '__main__':
     x = v.data
 
     import matplotlib.pyplot as plt
-    fig, axs = plt.subplots(res.shape[0], 2, figsize=(2*2, res.shape[0]*2), subplot_kw={'xticks': [], 'yticks': []})
+    fig, axs = plt.subplots(
+        res.shape[0], 2, figsize=(2*2, res.shape[0]*2), subplot_kw={'xticks': [], 'yticks': []})
     for i in range(res.shape[0]):
         im = x[i][0]
         axs[i, 0].imshow(im, vmin=im.min(), vmax=im.max(), cmap='gray')
