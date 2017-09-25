@@ -19,12 +19,12 @@ class MLP(chainer.Chain):
         return self.l3(x)
 
 
-class Conv(chainer.Chain):
+class CNN(chainer.Chain):
     def __init__(self, n_units):
         super(Conv, self).__init__()
         with self.init_scope():
-            self.conv1 = chainer.links.Convolution2D(in_channels=1, out_channels=n_units, ksize=3, stride=1)
-            self.conv2 = chainer.links.Convolution2D(in_channels=None, out_channels=n_units//2, ksize=3, stride=1)
+            self.conv1 = chainer.links.Convolution2D(in_channels=1, out_channels=n_units//2, ksize=3, stride=1)
+            self.conv2 = chainer.links.Convolution2D(in_channels=None, out_channels=n_units, ksize=3, stride=1)
             self.l = chainer.links.Linear(None, 10)
 
     def __call__(self, x):
@@ -36,34 +36,49 @@ class Conv(chainer.Chain):
 
 
 def main():
-#     parser = argparse.ArgumentParser(description='Chainer example: MNIST')
-#     parser.add_argument('--batch_size', '-b', type=int, default=100,
-#                         help='Number of images in each mini-batch')
-#     parser.add_argument('--epoch', '-e', type=int, default=20,
-#                         help='Number of sweeps over the dataset to train')
-#     parser.add_argument('--frequency', '-f', type=int, default=-1,
-#                         help='Frequency of taking a snapshot')
-#     parser.add_argument('--gpu', '-g', type=int, default=-1,
-#                         help='GPU ID (negative value indicates CPU)')
-#     parser.add_argument('--output', '-o', default='result',
-#                         help='Directory to output the result')
-#     parser.add_argument('--resume', '-r', default='',
-#                         help='Resume the training from snapshot')
-#     parser.add_argument('--unit', '-u', type=int, default=500,
-#                         help='Number of units')
-#     args = parser.parse_args()
-    args = easydict.EasyDict(
-        {
-            "batch_size":100,
-            "epoch":20,
-            "gpu":0,
-            "output":"result",
-            "resume":False,
-            "unit":64,
-            "frequency":1
-        }
-    )
-    model = chainer.links.Classifier(Conv(args.unit))
+    parser = argparse.ArgumentParser(description='Chainer example: MNIST')
+    parser.add_argument('--batch_size', '-b', type=int, default=100,
+                        help='Number of images in each mini-batch')
+    parser.add_argument('--epoch', '-e', type=int, default=20,
+                        help='Number of sweeps over the dataset to train')
+    parser.add_argument('--frequency', '-f', type=int, default=-1,
+                        help='Frequency of taking a snapshot')
+    parser.add_argument('--gpu', '-g', type=int, default=-1,
+                        help='GPU ID (negative value indicates CPU)')
+    parser.add_argument('--output', '-o', default='result',
+                        help='Directory to output the result')
+    parser.add_argument('--resume', '-r', default='',
+                        help='Resume the training from snapshot')
+    parser.add_argument('--unit', '-u', type=int, default=500,
+                        help='Number of units')
+    parser.add_argument('--net', '-n', default="MLP",
+                        help='Name of network')
+    parser.add_argument('--ndim', '-nd', type=int, default=1,
+                        help='Dimensions of inputs')
+    args = parser.parse_args()
+    # args = easydict.EasyDict(
+    #     {
+    #         "batch_size":100,
+    #         "epoch":20,
+    #         "gpu":0,
+    #         "output":"result",
+    #         "resume":False,
+    #         "unit":100,
+    #         "frequency":1,
+    #         "net":"MLP",
+    #         "ndim":1
+    #     }
+    # )
+
+    if args.net == "MLP":
+        Net = MLP
+        args.ndim = 1
+
+    elif args.net == "CNN":
+        Net = CNN
+        args.ndim = 3
+
+    model = chainer.links.Classifier(Net(args.unit))
 
     if args.gpu >= 0:
         chainer.cuda.get_device_from_id(args.gpu).use()
@@ -72,7 +87,7 @@ def main():
     optimizer = chainer.optimizers.Adam()
     optimizer.setup(model)
 
-    train, test = chainer.datasets.get_mnist(ndim=3)
+    train, test = chainer.datasets.get_mnist(ndim=args.ndim)
 
     train_iter = chainer.iterators.SerialIterator(train, args.batch_size)
     test_iter = chainer.iterators.SerialIterator(test, args.batch_size, repeat=False, shuffle=False)
@@ -114,7 +129,6 @@ def main():
     model.to_cpu()
     y = model.predictor(np.array(map(lambda x: x[0], train[:20])))
     return y
-
 
 
 def LRP(y):
@@ -218,7 +232,6 @@ def LRP_v4(z):
     for i, d in enumerate(z.data):
         r[i, d.argmax()] = d.max()
 
-
     while(creator is not None):
         # creator has weights
         if len(creator.inputs) > 1:
@@ -240,6 +253,7 @@ def LRP_v4(z):
         creator = var.creator
     return r
 
+
 def LRP_v5(z):
     creator = z.creator
     var = z
@@ -248,7 +262,6 @@ def LRP_v5(z):
     r = np.zeros(z.data.shape)
     for i, d in enumerate(z.data):
         r[i, d.argmax()] = d.max()
-
 
     while(creator is not None):
         # creator has weights
@@ -276,6 +289,7 @@ def LRP_v5(z):
         var = creator.inputs[0]
         creator = var.creator
     return r
+
 
 if __name__ == '__main__':
     y = main()
