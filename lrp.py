@@ -21,7 +21,7 @@ class MLP(chainer.Chain):
 
 class CNN(chainer.Chain):
     def __init__(self, n_units):
-        super(Conv, self).__init__()
+        super(CNN, self).__init__()
         with self.init_scope():
             self.conv1 = chainer.links.Convolution2D(in_channels=1, out_channels=n_units//2, ksize=3, stride=1)
             self.conv2 = chainer.links.Convolution2D(in_channels=None, out_channels=n_units, ksize=3, stride=1)
