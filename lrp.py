@@ -293,11 +293,22 @@ def LRP_v5(z):
 
 if __name__ == '__main__':
     y = main()
-    r = LRP_v5(y)
+    res = LRP_v5(y)
+    c = y.creator
+    v = y
+    while(c is not None):
+        v = c.inputs[0]
+        c = v.creator
+    x = v.data
+
     import matplotlib.pyplot as plt
-    plt.figure()
-    for i in r:
-        plt.imshow(i.reshape(28, 28))
-        plt.show()
+    fig, axs = plt.subplots(res.shape[0], 2, figsize=(2*2, res.shape[0]*2), subplot_kw={'xticks': [], 'yticks': []})
+    for i in range(res.shape[0]):
+        im = x[i][0]
+        axs[i, 0].imshow(im, vmin=im.min(), vmax=im.max(), cmap='gray')
+        im = res[i][0]
+        axs[i, 1].imshow(im, vmin=im.min(), vmax=im.max(), cmap='gray')
+    plt.savefig('lrp.png')
+    plt.show()
 
     pass
