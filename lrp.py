@@ -1,8 +1,13 @@
 import chainer
 from chainer.training import extensions
 import argparse
-import easydict
 import numpy as np
+from chainer.function import FunctionHook
+
+
+class RetainOutputHook(FunctionHook):
+    def forward_postprocess(self, function, in_data):
+        function.retain_outputs([0])
 
 
 class MLP(chainer.Chain):
@@ -49,13 +54,14 @@ def main():
                         help='Directory to output the result')
     parser.add_argument('--resume', '-r', default='',
                         help='Resume the training from snapshot')
-    parser.add_argument('--unit', '-u', type=int, default=500,
+    parser.add_argument('--unit', '-u', type=int, default=100,
                         help='Number of units')
-    parser.add_argument('--net', '-n', default="MLP",
+    parser.add_argument('--net', '-n', default="CNN",
                         help='Name of network')
-    parser.add_argument('--ndim', '-nd', type=int, default=1,
+    parser.add_argument('--ndim', '-nd', type=int, default=3,
                         help='Dimensions of inputs')
     args = parser.parse_args()
+    # import easydict
     # args = easydict.EasyDict(
     #     {
     #         "batch_size":100,
@@ -127,7 +133,8 @@ def main():
     trainer.run()
 
     model.to_cpu()
-    y = model.predictor(np.array(map(lambda x: x[0], train[:20])))
+    with RetainOutputHook():
+        y = model.predictor(np.array(map(lambda x: x[0], train[:20])))
     return y
 
 
@@ -151,11 +158,11 @@ def LRP(z):
             print " x:{}\n w:{}\n y:{}\n".format(x.shape, w.shape, y.shape)
             r = x.reshape(r.shape[0], -1) * (np.dot(r/y, w))
             print " r {}".format(r.shape)
-        if creator.label == "Convolution2DFunction":
+        elif creator.label == "Convolution2DFunction":
             print " x:{}\n w:{}\n y:{}\n".format(x.shape, w.shape, y.shape)
             r = x * chainer.functions.deconvolution_2d(r.reshape(y.shape)/y, w).data
             print " r {}".format(r.shape)
-        if creator.label == "MaxPooling2D":
+        elif creator.label == "MaxPooling2D":
             print " x:{}\n y:{}\n".format(x.shape, y.shape)
             r = chainer.functions.unpooling_2d(
                 r.reshape(y.shape), ksize=creator.kh, stride=creator.sy, outsize=x.shape[2:]).data
