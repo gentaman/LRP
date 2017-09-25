@@ -131,130 +131,7 @@ def main():
     return y
 
 
-def LRP(y):
-    print y.shape
-    v = y
-    c = y.creator
-    _a_ = []
-    while(c is not None):
-        print("\t c {}".format(c.label))
-        for i in c.inputs:
-            if not isinstance(i.data, type(None)):
-                print("{} {}".format(i.name, i.data.shape))
-        if not isinstance(c.inputs[0].data, type(None)):
-            _a_.append(c.inputs)
-        v = c.inputs[0]
-        c = v.creator
-    r = None
-    x = None
-    total_relevance = y.data.max(axis=1)
-    print y.data.argmax(axis=1)
-    for cnt, value in enumerate(_a_):
-        i, w, b = value
-        if cnt == 0:
-            print "w data {} w data argmax {} total {}, i {}".format(
-                w.data.shape, w.data[y.data.argmax(axis=1)].shape, total_relevance.shape, i.data.shape)
-            print w.data[y.data.argmax(axis=1)]
-            r = np.multiply(w.data[y.data.argmax(axis=1)], (total_relevance / y.data.max(axis=1))[0])* i.data
-        else:
-            print w.data.shape, x.data.shape
-            tmp = np.zeros(w.data.T.shape)
-            print "r : {}, tmp : {}, x : {}".format(r.shape, tmp.shape, x.data.shape)
-            for k, _w in enumerate(w.data.T):
-                tmp[k] = _w / (x.data[0] + 1e-5)
-            r = i.data * np.dot(r, tmp.T)
-        x = i
-    return r
-
-
-def LRP_v2(y):
-    v = y
-    c = y.creator
-    _a_ = []
-    while(c is not None):
-        print("creator {}".format(c.label))
-        for i in c.inputs:
-            if not isinstance(i.data, type(None)):
-                print("{} {}".format(i.name, i.data.shape))
-        if not isinstance(c.inputs[0].data, type(None)):
-            _a_.append(c.inputs)
-        v = c.inputs[0]
-        c = v.creator
-    x = None
-    r = np.zeros(y.data.shape)
-    for i, _ in enumerate(y.data):
-        r[i, _.argmax()] = _.max()
-    print "r : {}".format(r.argmax(axis=1))
-    for cnt, value in enumerate(_a_):
-        x, w, b = value
-        print "r : {}, x : {}, w : {}".format(r.shape, x.data.shape, w.data.shape)
-        tmp = []
-        for k, _w in enumerate(w.data):
-            z = x.data * _w
-            z = z / z.sum()
-            tmp.append(z)
-        tmp = np.asarray(tmp).transpose(1, 0, 2)
-        print "A : {}".format(tmp.shape)
-        r = np.asarray([np.dot(r[i, :], tmp[i, :]) for i in range(r.shape[0])])
-    return r
-
-
-def LRP_v3(y):
-    creator = y.creator
-    var = y
-    # relevance
-    r = np.zeros(y.data.shape)
-    for i, d in enumerate(y.data):
-        r[i, d.argmax()] = d.max()
-
-    while(creator is not None):
-        # creator has weights
-        if len(creator.inputs) > 1:
-            print "creator {}".format(creator.label)
-            x = creator.inputs[0].data
-            w = creator.inputs[1].data
-            y = creator.outputs[0]().data
-            print " x:{}\n w:{}\n y:{}\n".format(x.shape, w.shape, y.shape)
-            r = x * (np.dot(r/y, w))
-            print "r {}".format(r.shape)
-
-        var = creator.inputs[0]
-        creator = var.creator
-    return r
-
-
-def LRP_v4(z):
-    creator = z.creator
-    var = z
-    res = []
-    # relevance
-    r = np.zeros(z.data.shape)
-    for i, d in enumerate(z.data):
-        r[i, d.argmax()] = d.max()
-
-    while(creator is not None):
-        # creator has weights
-        if len(creator.inputs) > 1:
-            res.append((creator.label, creator.inputs, creator.outputs))
-            print "{}".format(creator.label)
-            x = creator.inputs[0].data
-            w = creator.inputs[1].data
-            y = creator.outputs[0]().data
-            if creator.label == "LinearFunction":
-                print " x:{}\n w:{}\n y:{}\n".format(x.shape, w.shape, y.shape)
-                r = x.reshape(r.shape[0], -1) * (np.dot(r/y, w))
-                print " r {}".format(r.shape)
-            if creator.label == "Convolution2DFunction":
-                print " x:{}\n w:{}\n y:{}\n".format(x.shape, w.shape, y.shape)
-                r = x * chainer.functions.deconvolution_2d(r.reshape(y.shape)/y, w).data
-                print " r {}".format(r.shape)
-
-        var = creator.inputs[0]
-        creator = var.creator
-    return r
-
-
-def LRP_v5(z):
+def LRP(z):
     creator = z.creator
     var = z
     res = []
@@ -293,7 +170,7 @@ def LRP_v5(z):
 
 if __name__ == '__main__':
     y = main()
-    res = LRP_v5(y)
+    res = LRP(y)
     c = y.creator
     v = y
     while(c is not None):
