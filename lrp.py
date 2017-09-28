@@ -40,42 +40,7 @@ class CNN(chainer.Chain):
         return self.l(x)
 
 
-def main():
-    parser = argparse.ArgumentParser(description='Chainer example: MNIST')
-    parser.add_argument('--batch_size', '-b', type=int, default=100,
-                        help='Number of images in each mini-batch')
-    parser.add_argument('--epoch', '-e', type=int, default=20,
-                        help='Number of sweeps over the dataset to train')
-    parser.add_argument('--frequency', '-f', type=int, default=-1,
-                        help='Frequency of taking a snapshot')
-    parser.add_argument('--gpu', '-g', type=int, default=-1,
-                        help='GPU ID (negative value indicates CPU)')
-    parser.add_argument('--output', '-o', default='result',
-                        help='Directory to output the result')
-    parser.add_argument('--resume', '-r', default='',
-                        help='Resume the training from snapshot')
-    parser.add_argument('--unit', '-u', type=int, default=100,
-                        help='Number of units')
-    parser.add_argument('--net', '-n', default="CNN",
-                        help='Name of network')
-    parser.add_argument('--ndim', '-nd', type=int, default=3,
-                        help='Dimensions of inputs')
-    args = parser.parse_args()
-    # import easydict
-    # args = easydict.EasyDict(
-    #     {
-    #         "batch_size":100,
-    #         "epoch":20,
-    #         "gpu":0,
-    #         "output":"result",
-    #         "resume":False,
-    #         "unit":100,
-    #         "frequency":1,
-    #         "net":"MLP",
-    #         "ndim":1
-    #     }
-    # )
-
+def main(args):
     if args.net == "MLP":
         Net = MLP
         args.ndim = 1
@@ -138,7 +103,7 @@ def main():
     return y
 
 
-def LRP(z):
+def LRP(z, epsilon=0):
     creator = z.creator
     var = z
     # relevance value
@@ -156,11 +121,13 @@ def LRP(z):
             w = creator.inputs[1].data
         if creator.label == "LinearFunction":
             print " x:{}\n w:{}\n y:{}\n".format(x.shape, w.shape, y.shape)
-            r = x.reshape(r.shape[0], -1) * (np.dot(r/y, w))
+            _y = y + epsilon*np.sign(y)
+            r = x.reshape(r.shape[0], -1) * (np.dot(r/_y, w))
             print " r {}".format(r.shape)
         elif creator.label == "Convolution2DFunction":
             print " x:{}\n w:{}\n y:{}\n".format(x.shape, w.shape, y.shape)
-            r = x * chainer.functions.deconvolution_2d(r.reshape(y.shape)/y, w).data
+            _y = y + epsilon*np.sign(y)
+            r = x * chainer.functions.deconvolution_2d(r.reshape(y.shape)/_y, w).data
             print " r {}".format(r.shape)
         elif creator.label == "MaxPooling2D":
             print " x:{}\n y:{}\n".format(x.shape, y.shape)
@@ -173,8 +140,46 @@ def LRP(z):
 
 
 if __name__ == '__main__':
-    y = main()
-    res = LRP(y)
+    parser = argparse.ArgumentParser(description='Chainer example: MNIST')
+    parser.add_argument('--batch_size', '-b', type=int, default=100,
+                        help='Number of images in each mini-batch')
+    parser.add_argument('--epoch', '-e', type=int, default=20,
+                        help='Number of sweeps over the dataset to train')
+    parser.add_argument('--epsilon', '-epsilon', type=float, default=0.,
+                        help='Value of epsilon')
+    parser.add_argument('--frequency', '-f', type=int, default=-1,
+                        help='Frequency of taking a snapshot')
+    parser.add_argument('--gpu', '-g', type=int, default=-1,
+                        help='GPU ID (negative value indicates CPU)')
+    parser.add_argument('--output', '-o', default='result',
+                        help='Directory to output the result')
+    parser.add_argument('--resume', '-r', default='',
+                        help='Resume the training from snapshot')
+    parser.add_argument('--unit', '-u', type=int, default=100,
+                        help='Number of units')
+    parser.add_argument('--net', '-n', default="CNN",
+                        help='Name of network')
+    parser.add_argument('--ndim', '-nd', type=int, default=3,
+                        help='Dimensions of inputs')
+    args = parser.parse_args()
+    # import easydict
+    # args = easydict.EasyDict(
+    #     {
+    #         "batch_size":100,
+    #         "epoch":20,
+    #         "epsilon":0,
+    #         "gpu":0,
+    #         "output":"result",
+    #         "resume":False,
+    #         "unit":100,
+    #         "frequency":1,
+    #         "net":"MLP",
+    #         "ndim":1
+    #     }
+    # )
+
+    y = main(args)
+    res = LRP(y, epsilon=args.epsilon)
     c = y.creator
     v = y
     while(c is not None):
@@ -189,8 +194,6 @@ if __name__ == '__main__':
         im = x[i][0]
         axs[i, 0].imshow(im, vmin=im.min(), vmax=im.max(), cmap='gray')
         im = res[i][0]
-        axs[i, 1].imshow(im, vmin=im.min(), vmax=im.max(), cmap='gray')
+        axs[i, 1].imshow(im, vmin=im.min(), vmax=im.max(), cmap='plasma')
     plt.savefig('lrp.png')
     plt.show()
-
-    pass
